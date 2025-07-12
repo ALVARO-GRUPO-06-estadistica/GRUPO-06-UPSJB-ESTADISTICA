@@ -1,0 +1,159 @@
+---
+title: "practica 2/3"
+author: "grupo 6"
+format: html
+editor: visual
+---
+
+**GRUPO 06:**\
+
+-   ALACOTE SALAS, Aylin Elisa
+
+-   ESQUIVEL MOLERO, Lourdes Valeria
+
+-   PALACIOS SALINAS, Danna Ariela
+
+-   ROJAS CORREA, Aitana
+
+-   VELASQUEZ ROMAN, Alvaro Fabian
+
+***TAREA***
+
+```{r}
+library(readr)
+```
+
+```{r}
+#install.packages("tidyverse")
+#install.packages("rio")
+#install.packages("here")
+#install.packages("janitor")
+#install.packages("skimr")
+#install.packages("visdat")
+```
+
+```{r}
+library(tidyverse)
+library(rio)
+library(here)
+library(janitor)
+library(skimr) 
+library(visdat)
+library(readr)
+```
+
+```{r}
+dim(data_conoc_actit_factor_cancer_cervical)
+```
+
+```{r}
+data_cancer = import("~/estadistica_upsjb_estudio/Estadistica/data/conoc_actit_factor_cancer_cervical.csv")
+```
+
+```{r}
+dim(data_cancer)
+```
+
+```{r}
+str(data_cancer)
+```
+
+```{r}
+dplyr::glimpse(data_cancer)
+```
+
+```{r}
+skimr::skim(data_cancer)
+```
+
+```{r}
+summary(data_cancer)
+```
+
+```{r}
+
+```
+
+**Visualmente**
+
+```{r}
+#view(data_cancer)
+```
+
+```{r}
+visdat::vis_dat(data_cancer)
+```
+
+```{r}
+data_cancer_1 = clean_names(data_cancer)
+```
+
+```{r}
+names(data_cancer)
+```
+
+```{r}
+names(data_cancer_1)
+```
+
+```{r}
+data_cancer_2 = mutate_if(data_cancer_1, is.character, list(~na_if(.,"")))
+```
+
+```{r}
+data_cancer_3 = remove_empty(data_cancer_2, which = c("rows", "cols"))
+```
+
+```{r}
+data_cancer_1 = data_cancer |> 
+  clean_names() |> 
+  mutate_if(is.character, list(~ na_if(., ""))) |> 
+  remove_empty(which = c("rows", "cols"))
+```
+
+```{r}
+data_cancer_1 |> count(edad)#Cambia de variable categórica
+```
+
+```{r}
+data_cancer_1 |> count(ocupacion)#Cambia de variable categórica
+```
+
+**data frame a tibble:**
+
+```{r}
+data_cancer_2 = as_tibble(data_cancer_1)
+```
+
+**colapso de variables:**
+
+```{r}
+data_cancer_3 |> count(ocupacion)
+```
+
+```{r}
+data_cancer_3 |> count(etnia)
+```
+
+colapso de 2 categorias:
+
+```{r}
+data_cancer_4 = data_cancer_3 |> 
+  mutate(ocupacion = case_when(ocupacion %in% c("ama de casa", "empleada") ~ "ama de casa-empleada",ocupacion %in% c("estudiante", "otro", "sin empleo") ~ "otras ocupaciones",
+    TRUE ~ ocupacion)
+    )
+```
+
+```{r}
+data_cancer_4 |> count(ocupacion)
+```
+
+```{r}
+summary(data_cancer_4$edad_relacion_sexual)
+```
+
+```{r}
+hist(data_cancer_4$edad_relacion_sexual)
+```
+
+## 
