@@ -1,0 +1,78 @@
+---
+title: "Practica_2_2/3"
+author: "Grupo 06"
+format: html
+editor: visual
+---
+
+GRUPO 06:
+
+Alumnos:
+
+\- ALACOTE SALAS, Aylin Elisa.
+
+\- ESQUIVEL MOLERO, Lourdes Valeria.
+
+\- PALACIOS SALINAS, Danna.
+
+\- ROJAS CORREA, Aitana.
+
+\- VELASQUEZ ROMAN, Alvaro Fabian.
+
+**METODOS DE REGRESION:**
+
+Instalamos los paquetes:
+
+```{r}
+#install.packages("rio")
+#install.packages("here")
+```
+
+Cargamos los paquetes:
+
+```{r}
+library(rio)
+library(here)
+```
+
+Cargamos los datos:
+
+```{r}
+data_cancer_cervical <- import("estadistica_upsjb_estudio/Estadistica/data/conoc_actit_factor_cancer_cervical.csv")
+```
+
+-   **Empleo para datos continuos - Para la variable "edad_relacion_sexual"**
+
+```{r}
+shapiro.test(data_cancer_cervical$edad_relacion_sexual)
+```
+
+En este caso aplicamos el test de normalidad de Shapiro-Wilk a la variable *edad_relacion_sexual*. El estadístico W fue 0.89182 y el valor p fue 2.045e-11 (0.00000000002045). Como el valor p es menor que 0.05, se rechaza la hipótesis nula. Por tanto, la variable no sigue una distribución normal.
+
+-   **Empleo para datos continuos - Para la variable "num_hijos"**
+
+```{r}
+shapiro.test(data_cancer_cervical$num_hijos)
+```
+
+Aqui realizamos el test de normalidad de Shapiro-Wilk sobre la variable *num_hijos*. El estadístico W fue 0.93222 y el valor p fue 1.693e-08 (0.00000001693) .Dado que el valor p es menor que 0.05, se rechaza la hipótesis nula, es asi que la variable no sigue una distribución normal.
+
+-   **Empleo en datos categoricos "Antecedentes de ETS":**
+
+```{r}
+table(data_cancer_cervical$antec_ets)
+```
+
+En nuestra base de datos, segun el empleo de datos categorico:
+
+Las hipótesis de esta prueba son:
+
+-   **Hipótesis nula (H₀):** No existe una diferencia significativa entre la proporción observada y la esperada.
+
+-   **Hipótesis alternativa (H₁):** Existe una diferencia significativa entre la proporción observada y la esperada.
+
+```{r}
+chisq.test(x = c(15, 203), p = c(0.410, 0.590))
+```
+
+Al aplicar Chi-cuadrado a los datos c(15, 203). El estadístico Chi-cuadrado fue 104.91, con 1 grado de libertad y un valor p menor a 2.2e-16. Dado que el valor p es menor que 0.05, se rechaza la hipótesis nula de igualdad de proporciones.

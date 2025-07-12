@@ -1,0 +1,337 @@
+---
+title: "Practica_05"
+author: "grupo 06"
+format: html
+editor: visual
+---
+
+**GRUPO 06:**\
+
+1.- ALACOTE SALAS, Aylin Elisa
+
+2.- ESQUIVEL MOLERO, Lourdes Valeria
+
+3.- PALACIOS SALINAS, Danna Ariela
+
+4.- ROJAS CORREA, Aitana
+
+5.- VELASQUEZ ROMAN, Alvaro Fabian
+
+**Trabajo semana 05:**
+
+Paquetes que nos permitiran la visualizacion de datos:
+
+```{r}
+#install.packages("gridExtra")
+```
+
+Cargamos la libreria:
+
+```{r}
+library(tidyverse)
+library(rio)
+library(here)
+library(gridExtra) ## Para múltiple gráficos en una sola página
+library(GGally) ## Para gráficos de correlación
+library(forcats)
+```
+
+Cargando los datos:
+
+```{r}
+data_cancer_0 <- import("~/estadistica_upsjb_estudio/Estadistica/data/conoc_actit_factor_cancer_cervical.csv")
+```
+
+Examinando datos:
+
+```{r}
+str(data_cancer_0)
+```
+
+**Conversion de caracteres a factor (categoricos) usando la funcion mutate_if()**
+
+Las variables categóricas (ej. Estadio T) han sido importadas como caracteres. Necesitamos transformalo a factores. En RStudio, factores es el tipo de dato para trabajar con variables categóricas.
+
+```{r}
+data_cancer <- data_cancer_0 |> 
+  mutate_if(is.character, as.factor)
+str(data_cancer)
+```
+
+Visualizando datos: el molde
+
+1.- Visualizacion de datos caegoricos:
+
+GRAFICO DE BARRAS:
+
+```{r}
+data_cancer |>  
+  ggplot(aes(x = e_marital)) +
+  geom_bar()
+```
+
+Grafico en orden decreciente:
+
+```{r}
+data_cancer |>  
+  ggplot(aes(x = fct_infreq(e_marital))) +
+  geom_bar()
+```
+
+Uso de la funcion labs()
+
+```{r}
+data_cancer |>  
+  ggplot(aes(x = fct_infreq(e_marital))) +
+  geom_bar() +
+  labs(y = "Frecuencia", x = "Estado Marital")
+```
+
+Calculando proporciones con y=
+
+```{r}
+data_cancer |>  
+  ggplot(aes(x = e_marital, y = ..count../sum(after_stat(count)))) +
+  geom_bar() +
+  labs(y = "Frecuencia", x = "Estado Marital")
+```
+
+**Visualizando datos numéricos:**
+
+Histogramas:
+
+```{r}
+data_cancer |>  
+  ggplot(aes(x = edad_relacion_sexual)) +
+  geom_histogram() +
+  labs(y = "Frecuencia", x = "edad a la que intimo")
+```
+
+```{r}
+data_cancer  |>  
+  ggplot(aes(x = edad_relacion_sexual)) +
+  geom_histogram(aes(y = ..density..)) +
+  labs(y = "Density", x = "Edad a la que intimo")
+```
+
+```{r}
+hist_1 = data_cancer |> ggplot(aes(x = edad_relacion_sexual)) +
+  geom_histogram() +
+  labs(y = "Frecuencia", x = "Edad a la que tuvo intimidad")
+
+hist_2 = data_cancer  |>  
+  ggplot(aes(x = edad_relacion_sexual)) +
+  geom_histogram(aes(y = ..density..)) +
+  labs(y = "Density", x = "Edad a la que tuvo intimidad")
+```
+
+```{r}
+grid.arrange(hist_1, hist_2, ncol = 2)
+```
+
+Conteo con numero de barras distinto:
+
+```{r}
+data_cancer |>  
+  ggplot(aes(x = edad_relacion_sexual)) +
+  geom_histogram(bins = 10) +
+  labs(y = "Frecuencia", x = "Edad a la que tuvo intimidad")
+```
+
+Modificando los colores de las barras del histograma:
+
+```{r}
+data_cancer |>  
+  ggplot(aes(x = edad_relacion_sexual)) +
+  geom_histogram(
+    color = "red", ## Color de las barras
+    fill = "yellow" ## Color de las barras
+    ) + 
+  labs(y = "Frecuencia", 
+       x = "Edad a la que tuvo intimidad")
+```
+
+Cambiando los colores de las barras:
+
+```{r}
+data_cancer |>  
+  ggplot(aes(x = fct_infreq(e_marital), fill = e_marital)) +
+  geom_bar() +
+  labs(y = "Frecuencia", x = "Estado Marital")
+```
+
+**Grafico de cajas y bigotes:**
+
+```{r}
+data_cancer |> 
+  ggplot(aes(y = parejas_sex)) + ## Cambia y por x para invertir el gráfico
+  geom_boxplot() +
+  theme(axis.text.x  = element_blank(),
+        axis.ticks.x = element_blank()) +
+  labs(y = "Parejas sexuales")
+```
+
+Empleando funcion nativa de R:
+
+```{r}
+box_parejas_sex = boxplot(data_cancer$parejas_sex,
+                         ylab = "Numero de parejas sexuales",
+                         horizontal = TRUE, ## Cambia la dirección del gráfico
+                         col = "blue") ## Añadimos color
+  
+```
+
+**Visualizando variables categoricas contra categoricas:**
+
+```{r}
+data_cancer |> 
+  ggplot(aes(x = etnia, fill = antec_ets)) +
+  geom_bar(position = "dodge") + ## Sin este argumento, las barras estarán una sobre otras
+  labs(y = "Frecuencia",  
+       x = "Etnia",
+       fill = "Antecedentes de contar con una ETS")
+```
+
+```{r}
+data_cancer |>   
+  group_by(etnia, antec_ets)  |>  
+  count() |>   
+  # Compute proportions within grade
+  # n is the default variable created by count()
+  group_by(etnia) |>   
+  mutate(Proportion = n/sum(n))  |> 
+  ggplot(aes(x = etnia, y = Proportion, fill = antec_ets)) +
+  geom_bar(position = 'dodge', stat = 'identity') +
+  labs(y = "Proportion",
+       x = "Etnia",
+       fill = "Antecedentes de contar con una ETS")
+```
+
+```{r}
+addmargins(prop.table(
+  table(data_cancer$antec_ets, data_cancer$etnia), 
+  margin = 2), 1)
+```
+
+**DISTRBUCION DE VARIABLES CONTINUAS *versus* CATEGORICAS**
+
+Grafico de barras:
+
+```{r}
+data_cancer |> 
+  filter(!is.na(practica) & !is.na(etnia)) |> 
+  group_by(practica, etnia) |> 
+  summarise(n = n(),
+            promedio = mean(num_hijos, na.rm = T),
+            de = sd(num_hijos, na.rm = T)) |> 
+  ggplot(aes(x = practica, y = promedio, fill = etnia)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_errorbar(aes(ymin = promedio - de, ymax = promedio + de),
+                width = 0.5, size = 0.75, position = position_dodge(0.9)) +
+  labs(y = "Numero de hijos", fill = "Etnia", x = "Buena practica del acto sexual")
+```
+
+Boxplots lado a lado:
+
+```{r}
+data_cancer |>  
+  filter(!is.na(parejas_sex)& !is.na(etnia))  |> 
+  ggplot(aes(y = parejas_sex, x = etnia)) +
+  geom_boxplot() +
+  labs(y = "Compañeros intimos", x = "Etnia")
+```
+
+```{r}
+data_cancer |>  
+  filter(!is.na(parejas_sex)& !is.na(etnia) & !is.na(practica))  |> 
+  ggplot(aes(y = parejas_sex, x = etnia, fill = practica)) +
+  geom_boxplot() +
+  labs(y = "Compañeros intimos", x = "Etnia")
+```
+
+```{r}
+data_cancer |>  
+  filter(!is.na(parejas_sex)& !is.na(etnia) & !is.na(practica))  |> 
+  ggplot(aes(y = parejas_sex, x = practica, fill = etnia)) +
+  geom_boxplot() +
+  labs(y = "Compañeros intimos", x = "Buena practica del acto sexual")
+```
+
+**FILAS DE HISTOGRAMAS**:
+
+```{r}
+data_cancer  |>  
+  filter(!is.na(etnia) & !is.na(antec_ets) & !is.na(edad_relacion_sexual)) |>
+  group_by(n_educacion) |>  
+  ggplot(aes(x = edad_relacion_sexual)) +
+  geom_histogram(aes(y = ..density..), bins = 20,
+                 color = "black", fill = "pink") +
+  labs(x = "Edad a la que tuvo intimidad", y = "Proporción") +
+  facet_wrap(~n_educacion, nrow = 4) +
+  ggtitle("Edad a la que tuvo intimidad segun su nivel educativo")
+```
+
+**Visualizacion para variables continuas:**
+
+```{r}
+data_cancer |> 
+  ggplot(aes(x = parejas_sex, y = edad_relacion_sexual)) +
+  geom_point() +
+  labs(x = "Compañeros sexuales", y = "Edad a la que tuvo intimidad")
+```
+
+```{r}
+data_cancer |> 
+  ggplot(aes(x = parejas_sex, y = edad_relacion_sexual)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE) +
+  labs(x = "Compañeros sexules", y = "Edad a la que tuvi intimidad")
+```
+
+```{r}
+data_cancer |> 
+  ggplot(aes(x = parejas_sex, y = edad_relacion_sexual)) +
+  geom_point() +
+  geom_smooth(stat = "smooth", se = TRUE) +
+  labs(x = "Compañeros sexuales", y = "Edad a la que tuvo intimidad")
+```
+
+**Funcion ggpairs:**
+
+```{r}
+data_cancer |>  
+  select(edad_relacion_sexual, parejas_sex, num_hijos) %>% 
+  ggpairs(columnLabels = c("Edad a la que tuvo intimidad", "Compañeros sexuales", "Numero de hijos"))
+```
+
+Exportando el grafico:
+
+```{r}
+ggsave(
+  "nombre_de_objeto.png",
+  width = 7, # Ancho
+  height = 4, # Alto
+  dpi = 300 # resolución
+) 
+```
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+1 + 1
+```
+
+You can add options to executable code like this
+
+```{r}
+#| echo: false
+2 * 2
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).

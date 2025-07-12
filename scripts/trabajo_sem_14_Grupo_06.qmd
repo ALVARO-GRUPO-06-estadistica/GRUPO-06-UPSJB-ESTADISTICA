@@ -1,0 +1,321 @@
+---
+title: "Practica 4 - 2/3"
+author: "Grupo 06"
+format: html
+editor: visual
+---
+
+**Trabajo Practico 4 - 2/3**
+
+**GRUPO:**
+
+\- ALACOTE SALAS, Aylin Elisa.
+
+\- ESQUIVEL MOLERO, Lourdes Valeria.
+
+\- PALACIOS SALINAS, Danna Ariela.
+
+\- ROJAS CORREA, Aitana.
+
+\- VELASQUEZ ROMAN, Alvaro Fabian.
+
+**Instalamos y cargamos los paquetes:**
+
+```{r}
+install.packages("mice")
+install.packages("ggmice")
+```
+
+```{r}
+library(mice)
+library(tidyverse)
+library(here)
+library(rio)
+library(ggmice)
+library(gtsummary)
+```
+
+**Cargamos los datos:**
+
+```{r}
+data_can_cerv <- import(here("estadistica_upsjb_estudio/Estadistica/data/conoc_actit_factor_cancer_cervical.csv"))
+```
+
+**Revisamos los datos:**
+
+```{r}
+head(data_can_cerv)
+```
+
+**Realizamos la imputacion de los datos:**
+
+\- ¿Donde estan nuetros datos perdidos?
+
+```{r}
+colSums(is.na(data_can_cerv))
+```
+
+**Visualizamos los datos perdidos en un mapa de calor usando la funcion `plot_pattern()` de ggmice.**
+
+```{r}
+data_can_cerv |>
+  select(
+      edad,
+      e_marital,
+      n_educacion,
+      etnia,
+      religion,
+      procedencia,
+      ocupacion,
+      ocupacion_convi,
+      antec_fam,
+      edad_relacion_sexual,
+      parejas_sex,
+      num_hijos,
+      met_anticoncep,
+      antec_ets,
+      conocimiento,
+      actitud,
+      practica
+    ) |>
+  ggmice::plot_pattern(
+    square = TRUE,
+    rotate = TRUE
+  )
+```
+
+Interpretacion: Nuestro gráfico muestra que el conjunto de datos carece por completo de valores faltantes. Todas las 17 variables, como "edad" u "ocupacion", tienen 218 observaciones completas. Cada columna está totalmente llena de datos observados, sin ninguna entrada faltante. Esto significa que la imputación de datos, con `mice()`, no es necesaria para nuestra dataset particular, ya que no hay valores ausentes que reemplazar.
+
+**Comparacion de participantes con y sin valores perdidos:**
+
+```{r}
+tabla_parejas_sex = data_can_cerv |> 
+  dplyr::select(
+      edad,
+      e_marital,
+      n_educacion,
+      etnia,
+      religion,
+      procedencia,
+      ocupacion,
+      ocupacion_convi,
+      antec_fam,
+      edad_relacion_sexual,
+      parejas_sex,
+      num_hijos,
+      met_anticoncep,
+      antec_ets,
+      conocimiento,
+      actitud,
+      practica
+    ) |>
+  mutate(missing = factor(
+    is.na(parejas_sex),
+    levels = c(FALSE, TRUE),
+    labels = c("Sin valores perdidos", "Con valores perdidos")
+  )) |> 
+  tbl_summary(
+    by = missing,
+    statistic = list(
+      all_continuous()  ~ "{mean} ({sd})",
+      all_categorical() ~ "{n}    ({p}%)")
+    ) |> 
+  modify_header(label = "**Variable**",
+                all_stat_cols() ~ "**{level}**<br>N = {n} ({style_percent(p, digits=1)}%)") |> 
+  modify_caption("Características de los valores perdidos") |> 
+  bold_labels()
+
+tabla_edad_relacion_sexual = data_can_cerv |> 
+  dplyr::select(
+      edad,
+      e_marital,
+      n_educacion,
+      etnia,
+      religion,
+      procedencia,
+      ocupacion,
+      ocupacion_convi,
+      antec_fam,
+      edad_relacion_sexual,
+      parejas_sex,
+      num_hijos,
+      met_anticoncep,
+      antec_ets,
+      conocimiento,
+      actitud,
+      practica
+    ) |>
+  mutate(missing = factor(
+    is.na(edad_relacion_sexual),
+    levels = c(FALSE, TRUE),
+    labels = c("Sin valores perdidos", "Con valores perdidos")
+  )) |> 
+  tbl_summary(
+    by = missing,
+    statistic = list(
+      all_continuous()  ~ "{mean} ({sd})",
+      all_categorical() ~ "{n}    ({p}%)")
+    ) |> 
+  modify_header(label = "**Variable**",
+                all_stat_cols() ~ "**{level}**<br>N = {n} ({style_percent(p, digits=1)}%)") |> 
+  modify_caption("Características de los participantes segun valor perdido") |> 
+  bold_labels()
+
+tabla <- tbl_merge(
+  tbls = list(tabla_parejas_sex, tabla_edad_relacion_sexual),
+  tab_spanner = c("**N° de parejas intimas**", "**Edad a la que intimaron por primera vez**")
+)
+```
+
+```{r}
+tabla
+```
+
+Interpretacion: El documento "Características de los valores perdidos" presenta un análisis del dataset de 218 observaciones. Las tablas, que abarcan variables como "edad", "ocupación", "etnia" y "conocimiento", demuestran consistentemente que todas las variables están completas. Cada entrada bajo la categoría "Sin valores perdidos" registra un "N=0(0%)", lo que significa que el conjunto de datos carece totalmente de valores ausentes. Esta información es importante, ya que confirma que no se requiere ninguna técnica de imputación de datos, como `mice()`, para este particular dataset.
+
+**¿Qué variables debemos incluir en el proceso de imputación?**
+
+```{r}
+input_data =
+  data_can_cerv |>
+    dplyr::select(
+      edad,
+      e_marital,
+      n_educacion,
+      etnia,
+      religion,
+      procedencia,
+      ocupacion,
+      ocupacion_convi,
+      antec_fam,
+      edad_relacion_sexual,
+      parejas_sex,
+      num_hijos,
+      met_anticoncep,
+      antec_ets,
+      conocimiento,
+      actitud,
+      practica
+    ) |> 
+  mutate(antec_ets = as.factor(antec_ets))
+```
+
+**- Usando funcion "mice()" para imputar datos:**
+
+```{r}
+names(input_data)
+```
+
+```{r}
+data_imputada =
+  mice(
+    input_data,
+    m = 20,
+    method = c(
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "pmm",
+      "pmm",
+      "",
+      "",
+      "logreg",
+      "",
+      "",
+      ""),
+    maxit = 20,
+    seed = 3,
+    print = F
+    )
+```
+
+```{r}
+data_imputada
+```
+
+**Analizando los datos imputados:**
+
+\- Para la variable parejas_sex
+
+```{r}
+ggmice(data_imputada, aes(x = .imp, y = parejas_sex)) +
+  geom_jitter(height = 0, width = 0.25) +
+  geom_boxplot(width = 0.5, size = 1, alpha = 0.55, outlier.shape = NA) +
+  labs(x = "Imputation number")
+```
+
+Interpretacion: El gráfico generado con `ggmice` nos ayuda a visualizar la distribución de la variable "parejas_sex" en el conjunto de datos `data_imputada`. Se utiliza `geom_jitter` para mostrar los puntos de datos individuales y `geom_boxplot` para representar la mediana, cuartiles y posibles valores atípicos. La etiqueta del eje X, "Imputation number", y la ausencia de puntos en "imputed" (0 en el eje x) sugieren que se está mostrando la distribución de los valores observados de la variable, sin que se hayan generado imputaciones para esta. Esto coincide con la observación previa de que el dataset no presenta valores faltantes.
+
+\- Para la variable edad_relacion_sexual:
+
+```{r}
+ggmice(data_imputada, aes(x = .imp, y = edad_relacion_sexual)) +
+  geom_jitter(height = 0, width = 0.25) +
+  geom_boxplot(width = 0.5, size = 1, alpha = 0.55, outlier.shape = NA) +
+  labs(x = "Imputation number")
+```
+
+Interpretacion: El gráfico generado con `ggmice` nos ayuda a visualizar la distribución de la variable "edad_relacion_sexual" en `data_imputada`. Utiliza `geom_jitter` para mostrar puntos individuales y `geom_boxplot` para la mediana y cuartiles. El eje X, "Imputation number", solo muestra el valor 0, correspondiente a los datos observados, sin presencia de puntos en "imputed". Esto sugiere que no se realizaron imputaciones para esta variable. Esto es coherente con análisis previos que indicaban la ausencia total de valores faltantes en el conjunto de datos.
+
+```{r}
+data_imputada_l <- complete(data_imputada, "long", include = TRUE)
+```
+
+**Observamos la tabla:**
+
+```{r}
+data_imputada_l <- data_imputada_l %>% 
+  mutate(imputed = .imp > 0,
+         imputed = factor(imputed,
+                          levels = c(F,T),
+                          labels = c("Observado", "Imputado")))
+
+prop.table(table(data_imputada_l$antec_ets,
+                 data_imputada_l$imputed),
+           margin = 2)
+```
+
+**Procedimientos adicionales:**
+
+```{r}
+tabla_multi <-
+  data_imputada |> 
+  with(glm(antec_ets ~ edad + e_marital + n_educacion + etnia + religion + procedencia + ocupacion + ocupacion_convi + antec_fam + edad_relacion_sexual + parejas_sex + num_hijos + met_anticoncep + actitud + practica,
+           family = binomial(link = "logit"))) |> 
+  tbl_regression(exponentiate = TRUE,
+                 label = list(
+                   e_marital ~ "Estado marital",
+                   n_educacion ~ "Nivel de educacion",
+                   etnia ~ "Etnia",
+                   religion ~ "Religion",
+                   procedencia ~ "Procedencia",
+                   ocupacion ~ "Ocupacion (a que se dedica)",
+                   ocupacion_convi ~ "Ocupacion del conviviente",
+                   antec_fam ~ "Antecedente familiar",
+                   edad_relacion_sexual ~ "Edad a la que intimo por primera vez",
+                   parejas_sex ~ "N° de parejas intimas",
+                   num_hijos ~ "Numero de hijos",
+                   met_anticoncep ~ "Tipo de metodo anticonceptivo",
+                   actitud ~ "Actitud",
+                   practica ~ "Tipo de practica")) |>
+  bold_p(t = 0.05) |>
+  modify_header(estimate = "**OR ajustado**", p.value = "**p valor** ")
+```
+
+```{r}
+tabla_multi
+```
+
+Interpretacion:
+
+Podemos ver los resultados del análisis estadístico, de regresión logística, donde "OR ajustado", intervalos de confianza del 95% (95% CI) y valores p para diversas características. Se observa que la "Edad a la que intimaron por primera vez" (OR=0.60, p=0.021) y el "N° de parejas intimas" (OR=1.67, p=0.019) son las únicas variables que muestran una asociación estadísticamente significativa (p\<0.05). Las demás variables no muestran significancia, como "Estado marital" o "Nivel de educación".
+
+**CONCLUSION**:
+
+Es asi que lleamos que en retrospectiva, el análisis de datos completo, donde no hay **valores faltantes** en ninguna de las 17 variables, como lo confirman tanto las tablas descriptivas, como la visualización de patrones de datos faltantes con `ggmice`. Aunque se exploró la imputación de datos mediante la función `mice()`, los gráficos de distribución para "parejas_sex" y "edad_relacion_sexual" validan la ausencia de imputaciones, al mostrar únicamente datos "observados". Finalmente, nuestro análisis de regresión destaca una **asociación estadísticamente significativa** (p\<0.05) únicamente para "Edad a la que intimaron por primera vez" y "N° de parejas intimas".

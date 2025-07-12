@@ -1,0 +1,266 @@
+---
+title: "Practica semana 11"
+author: "GRUPO 06"
+format: html
+editor: visual
+---
+
+GRUPO 06:
+
+\- ALACOTE SALAS, Aylin Elisa.
+
+\- ESQUIVEL MOLERO, Lourdes Valeria.
+
+\- PALACIOS SALINAS, Danna Ariela.
+
+\- ROJAS CORREA, Aitana.
+
+\- VELASQUEZ ROMAN, Alvaro Fabian.
+
+Instalamos los paquetes:
+
+```{r}
+install.packages("broom")
+install.packages("survival")
+install.packages("survminer")
+install.packages("ggsurvfit")
+```
+
+Cargamos:
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(survival)
+library(survminer)
+library(gtsummary)
+library(broom)
+library(here)
+library(rio)
+library(ggsurvfit)
+```
+
+Emplearemos 2 tecnicas:
+
+\- Análisis de supervivencia usando el método de Kaplan-Meier
+
+\- Regresión de riesgos proporcionales (PH) de Cox
+
+ESTIMACIONES DE SUPERVIVENCIA USANDO EL METODO DE KAPLAN-MEIER
+
+\- Uso de nuestro dataset:
+
+```{r}
+cancer_cerv <- import(here("estadistica_upsjb_estudio/Estadistica/data/conoc_actit_factor_cancer_cervical.csv"))
+```
+
+Vemos nuestro dataset:
+
+```{r}
+cancer_cerv |> 
+  select(parejas_sex, edad_relacion_sexual, antec_fam) |> 
+  summary()
+```
+
+**Desenlace en el analisis de la supervivencia:**
+
+Kaplan Meier:
+
+```{r}
+Surv(cancer_cerv$edad, cancer_cerv$num_hijos)
+```
+
+Los datos muestran edades con indicios de cantidad de hijos. Muchos valores cercanos a 25–30 años podrían representar personas jóvenes, posiblemente con pocos o ningún hijo. En edades mayores (45–60), se observa mayor frecuencia, lo que sugiere acumulación de hijos con el tiempo. Las marcas “+” podrían indicar personas con hijos, y “?” incertidumbre. La relación general sugiere que a mayor edad, mayor número de hijos, con variabilidad significativa entre individuos.
+
+```{r}
+km = survfit(Surv(edad, num_hijos) ~ 1, data = cancer_cerv)
+```
+
+que hay dentro del km?
+
+```{r}
+str(km)
+```
+
+GRAFICO DE KAPLAN-MEIER:
+
+```{r}
+survfit2(Surv(edad, num_hijos) ~ 1, data = cancer_cerv) |>  
+  ggsurvfit() +
+  labs(
+    x = "Edad",
+    y = "Numero de hijos concebidos"
+  ) +
+  add_censor_mark()
+```
+
+Añadimos intervlos de confianza:
+
+```{r}
+survfit2(Surv(edad, num_hijos) ~ 1, data = cancer_cerv) |>  
+  ggsurvfit() +
+  labs(
+    x = "Edad",
+    y = "Numero de hijos concebidos"
+  ) + 
+  add_censor_mark() +
+  add_confidence_interval() +
+  add_risktable()
+```
+
+Interpretacion:
+
+En el gráfico donde observamos a 73 individuos para analizar la edad a la que conciben un hijo (el "evento").
+
+El eje Y, etiquetado "Numero de hijos concebidos", representa la proporción de individuos que *aún no han concebido*. La curva se mantiene en 1.00 hasta pasados los 20 años, indicando que nadie concibió antes de esa edad.
+
+La mediana de edad para la concepción, cuando el 50% del grupo ha tenido un hijo, se encuentra aproximadamente a los 49 años. La incertidumbre (banda gris) aumenta significativamente después de los 55 años, ya que quedan muy pocos individuos en riesgo.
+
+**Estimacion de la supervivencia por años:**
+
+```{r}
+summary(survfit(Surv(edad, num_hijos) ~ 1, data = cancer_cerv), times = 30.15)
+```
+
+```{r}
+survfit2(Surv(edad, num_hijos) ~ 1, data = cancer_cerv) |>
+  ggsurvfit() +
+  labs(
+    x = "Edad",
+    y = "Numero de hijos concebidos"
+  ) + 
+  add_confidence_interval() +
+  add_risktable() +
+  add_quantile(x_value = 30.15, linewidth = .7)
+```
+
+Mediana de supervivencia:
+
+```{r}
+survfit2(Surv(edad, num_hijos) ~ 1, data = cancer_cerv) |>
+  ggsurvfit() +
+  labs(
+    x = "Edad",
+    y = "Numero de hijos concebidos"
+  ) + 
+  add_confidence_interval() +
+  add_risktable() +
+  add_quantile(y_value = 0.5, linewidth = .7)
+```
+
+**¿COMO REPORTAR?**
+
+```{r}
+theme_gtsummary_language(language = "es")
+```
+
+```{r}
+survfit(Surv(edad, num_hijos) ~ 1, data = cancer_cerv) %>% 
+  tbl_survfit(
+    times = 30.15,
+    label_header = "**Numero de hijos concebidos(IC 95%)**"
+  )
+```
+
+```{r}
+survfit(Surv(edad, num_hijos) ~ 1, data = cancer_cerv) |>  
+  tbl_survfit(
+    probs = 0.5,
+    label_header = "**Numero de hijos concebidos(IC 95%)**"
+  )
+```
+
+**COMPARANDO EN DOS GRUPOS:**
+
+```{r}
+survdiff(Surv(edad, num_hijos) ~ antec_fam, data = cancer_cerv)
+```
+
+El valor de p = 0.004 de la prueba de log-rank indica que existe una diferencia estadísticamente significativa.
+
+**El siguiente gráfico de Kaplan-meier muestra el resultado de la prueba de log-rank.**
+
+```{r}
+survfit2(Surv(edad, num_hijos) ~ antec_fam, data = cancer_cerv) |>
+  ggsurvfit() +
+  labs(
+    x = "Edad",
+    y = "Numero de hijos concebidos"
+  ) + 
+  add_confidence_interval() +
+  add_risktable() +
+  add_pvalue(caption = "Log-rank {p.value}")
+```
+
+**MODELO DE REGRESION COX:**
+
+**Cargamos data set:**
+
+```{r}
+can_cervical_data <- import(here("estadistica_upsjb_estudio/Estadistica/data/conoc_actit_factor_cancer_cervical.csv"))
+```
+
+Usamos la variable tipo:
+
+```{r}
+coxph(Surv(edad, num_hijos == "concepcion") ~ procedencia, data = can_cervical_data)
+```
+
+**REPORTE:**
+
+```{r}
+coxph(Surv(edad, num_hijos == "Concepcion") ~ procedencia, data = can_cervical_data) %>% 
+  tbl_regression(exp = TRUE) 
+```
+
+**Interpretacion:**
+
+Este código ejecuta un análisis de supervivencia de Cox (coxph) para evaluar cómo la `procedencia` (origen) afecta el riesgo de un evento a lo largo del tiempo (Edad), usando datos de `can_cervical_data`.
+
+La tabla de resultados compara el riesgo del grupo URBANO frente al grupo RURAL (la referencia). El `HR` (Cociente de Riesgos) para "urbano" indicaría si su riesgo es mayor o menor.
+
+La tabla resume el efecto de la variable PROCEDENCIA. El grupo RURAL, es la categoría de referencia, sirviendo como base de comparación.
+
+La fila URBANO (cuyos valores no son visibles) mostraría el Cociente de Riesgos (HR) y su p-valor, indicando si el riesgo es significativamente diferente al del grupo rural.
+
+Reporte para multiples variables:
+
+```{r}
+tabla_cox <- can_cervical_data |>
+  tbl_uvregression(
+    include = c(e_marital, n_educacion, religion, etnia, procedencia, ocupacion, ocupacion_convi, antec_fam, edad_relacion_sexual, parejas_sex, met_anticoncep, antec_ets, conocimiento, actitud, practica),
+    y = Surv(edad, num_hijos == "Concepcion"),
+    method = coxph,
+    exponentiate = TRUE,
+    conf.int = TRUE,
+    hide_n = TRUE,
+    add_estimate_to_reference_rows = FALSE,
+    pvalue_fun = ~ style_pvalue(.x, digits = 1),
+    estimate_fun = ~ style_number(.x, digits = 1),
+    label = list(
+      e_marital ~ "Estado Marital",
+      n_educacion ~ "Nivel de Educacion",
+      religion ~ "Religion",
+      etnia ~ "Etnia",
+      procedencia ~ "Procedencia",
+      ocupacion ~ "Ocupacion/trabajo",
+      ocupacion_convi ~ "Ocupacion del conviviente",
+      antec_fam ~ "Antecedente familiar de presentar la enf.",
+      edad_relacion_sexual ~ "Edad a la que intimo por primera vez",
+      parejas_sex ~ "Acompañantes sexuales",
+      met_anticoncep ~ "Uso de metodos anticonceptivos",
+      antec_ets ~ "Antecedentes de tener una ETS",
+      conocimiento ~ "Conocimiento del tema",
+      actitud ~ "Actitud ante el caso",
+      practica ~ "Practica"
+    )
+  ) |>
+  bold_p(t = 0.05) |>
+  modify_header(estimate = "**HR no ajustado**", p.value = "**Valor P**")
+```
+
+Imprimimos la tabla:
+
+```{r}
+tabla_cox
+```
